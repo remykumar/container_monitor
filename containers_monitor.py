@@ -1,30 +1,35 @@
 #!/usr/bin/env python3 
 import mysql.connector
 import os 
+import time
 
-# Getting the container count 
-container_count = os.popen('docker ps -q | wc -l').read().strip()
+while True:
+ # Getting the container count 
+ container_count = os.popen('docker ps -q | wc -l').read().strip()
 
-if container_count == "0":
- print ("\nNO CONTAINERS RUNNING FOR MONITORING.. EXITING PROGRAM\n")
- exit()
+ if container_count == "0":
+  print ("\nNO CONTAINERS RUNNING FOR MONITORING.. EXITING PROGRAM\n")
+  exit()
+
+ user = os.popen('cat /home/ubuntu/.secret.txt | grep user | awk -F "=" \'{print $2}\'').read().strip()
+ password = os.popen('cat /home/ubuntu/.secret.txt | grep password | awk -F "=" \'{print $2}\'').read().strip()
+ host = os.popen('cat /home/ubuntu/.secret.txt | grep host | awk -F "=" \'{print $2}\'').read().strip()
+ database = os.popen('cat /home/ubuntu/.secret.txt | grep "database=" | awk -F "=" \'{print $2}\'').read().strip()
+ conn = mysql.connector.connect(user=''+user+'',password=''+password+'',host=''+host+'',database=''+database+'') 
+ cur = conn.cursor(buffered=True) 
+
+ cur.execute("show tables like '%containers%'") 
+ result = cur.fetchall()
+ #result = cur.execute("SELECT table_name FROM information_schema.tables where table_name='containers'") 
+ #print(result)
+ if result: 
+  print ("\ncontainers table already exists, removing it before creating a fresh copy\n")
+  cur.execute("drop table containers") 
+  conn.commit()
 
 
-conn = mysql.connector.connect(user='root',password='Password-18',host='database-1.cea7il7mfhry.us-east-2.rds.amazonaws.com',database='test') 
-cur = conn.cursor(buffered=True) 
-
-cur.execute("show tables like '%containers%'") 
-result = cur.fetchall()
-#result = cur.execute("SELECT table_name FROM information_schema.tables where table_name='containers'") 
-#print(result)
-if result: 
-    print ("\ncontainers table already exists, removing it before creating a fresh copy\n")
-    cur.execute("drop table containers") 
-    conn.commit()
-
-
-cur.execute('''CREATE TABLE containers
-        (Image_Name VARCHAR(20) NOT NULL, 
+ cur.execute('''CREATE TABLE containers
+        (Image_Name VARCHAR(50) NOT NULL, 
         IP VARCHAR(20) NOT NULL, 
         CMD VARCHAR(20) NOT NULL,
         CPU_Set VARCHAR(20) NOT NULL,
@@ -34,18 +39,18 @@ cur.execute('''CREATE TABLE containers
         PRIMARY KEY(IP))
         ''') 
 
-print("\nCREATED containers table\n") 
-# Get the count of running containers
-container_count = os.popen('docker ps -q | wc -l').read().strip()
+ print("\nCREATED containers table\n") 
+ # Get the count of running containers
+ container_count = os.popen('docker ps -q | wc -l').read().strip()
 
-if container_count == "0": 
- print ("NO CONTAINERS RUNNING.. EXITING PROGRAM") 
- exit() 
+ if container_count == "0": 
+  print ("NO CONTAINERS RUNNING.. EXITING PROGRAM") 
+  exit() 
 
-print(f'\nNumber of Container(s) running = {container_count}\n')
-print("\nCOLLECTING STATS FROM RUNNING CONTAINER AND INSERTING INTO DB....\n")
-container_ids = os.popen('docker ps -q').read() 
-for line in container_ids.splitlines(): 
+ print(f'\nNumber of Container(s) running = {container_count}\n')
+ print("\nCOLLECTING STATS FROM RUNNING CONTAINER AND INSERTING INTO DB....\n")
+ container_ids = os.popen('docker ps -q').read() 
+ for line in container_ids.splitlines(): 
     #print(line)
     try: 
      Image_Name = os.popen('docker inspect '+line+' --format=\'{{.Config.Image}}\'').read().strip()
@@ -101,18 +106,12 @@ for line in container_ids.splitlines():
     #            "(Image_Name, IP, CMD, CPU_Set, CPU_Usage, Memory_Set, Memory_Usage) " 
     #            "values (%(Image_Name)s, %(IP)s, %(CMD)s, %(CPU_Set)s, %(CPU_Usage)s, %(Memory_Set)s, %(Memory_Usage)s)")
 
-"""
-cur.execute("insert into containers values('AAL','American Airlines')")
-cur.execute("insert into containers values('UAL','United Airlines')")
-cur.execute("insert into containers values('LUV','Southwest Airlines')")
-cur.execute("insert into containers values('VA','Virgin America')")
-"""
-conn.commit() 
-#c.execute("select * from stocks")
-conn.close() 
+ conn.commit() 
+ #c.execute("select * from stocks")
+ conn.close() 
 
-print ("\nCONTAINER INFO INSERTED INTO THE DATABASE!\n")
+ print ("\nCONTAINER INFO INSERTED INTO THE DATABASE!\n")
 
-print ("\nGETTING THE DATA FROM containers table:\n")
-#table_result = os.popen("containers_read.py").read()
-exec(open("containers_read.py").read())
+ print ("\nGETTING THE DATA FROM containers table:\n")
+ exec(open("db_reader.py").read())
+ time.sleep(90)
