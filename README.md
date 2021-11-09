@@ -4,7 +4,7 @@ There is a build script also provided in the repo.
 
 **To execute the monitor as a continuous background daemon process, run it as:**
  
-./build_run_script.sh
+`./build_run_script.sh`
 
 Note : This will collect metrics every 90 seconds and update the mysql database in AWS 
 
