@@ -27,7 +27,7 @@ http://3.21.129.212/container_monitor.html
 
 
 
-**To execute as foreground process & see , run it as:**
+**To execute as foreground process & see it on Linux console , run it as:**
 
 `python3 containers_monitor.py`
 
